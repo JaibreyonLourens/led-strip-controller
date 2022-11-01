@@ -8,12 +8,16 @@ pixels = neopixel.NeoPixel(board.D18, 20)
 
 
 class ledController:
-    def __init__(self, pixels, red, green, blue, pixel_count):
+    def __init__(self, pixels,id , red, green, blue, pixel_count, isOn):
         self.pixels = pixels
+        self.id = id
         self.red = self.checkValues(red)
         self.green = self.checkValues(green)
         self.blue = self.checkValues(blue)
-        self.isOn = False
+        if isOn is not None:
+            self.isOn = isOn
+        else:
+            self.isOn = False
         self.pixel_count = pixel_count
         
         
@@ -38,9 +42,9 @@ class ledController:
             for i in range (self.pixel_count):
                 self.pixels[i] = (0, 0, 0)
                 pixels.show()
-        else:
+        elif (self.isOn == False):
             self.isOn = True
-            for i in range (9):
+            for i in range (self.pixel_count):
                 self.pixels[i] = (self.red, self.green, self.blue)
                 pixels.show()
 
@@ -64,10 +68,14 @@ class ledController:
             ledController.led_on(self)
             return self.red, self.green, self.blue
     def change_color(self, red, green, blue):
+        self.led_off()
         self.red = self.checkValues(red)
         self.green = self.checkValues(green)
         self.blue = self.checkValues(blue)
-        self.led_on
+        for i in range (self.pixel_count):
+                self.pixels[i] = (self.red, self.green, self.blue)
+                pixels.show()
+        self.led_on()
     def change_pixel_count(self, pixel_count):
         self.pixel_count = pixel_count
         self.led_on()
@@ -76,8 +84,9 @@ class ledController:
             "red": self.red,
             "green": self.green,
             "blue": self.blue,
+            "isOn": self.isOn,
             "pixel_count": self.pixel_count
-            
+
         }
         return data
 
