@@ -8,7 +8,7 @@ pixels = neopixel.NeoPixel(board.D18, 20)
 
 
 class ledController:
-    def __init__(self, pixels,id , red, green, blue, pixel_count, isOn):
+    def __init__(self, pixels,id , red, green, blue, pixel_count, isOn, rainbow):
         self.pixels = pixels
         self.id = id
         self.red = self.checkValues(red)
@@ -18,6 +18,10 @@ class ledController:
             self.isOn = isOn
         else:
             self.isOn = False
+        if rainbow is not None:
+            self.rainbow = False
+        else:
+            self.rainbow = False
         self.pixel_count = pixel_count
         
         
@@ -79,6 +83,39 @@ class ledController:
     def change_pixel_count(self, pixel_count):
         self.pixel_count = pixel_count
         self.led_on()
+
+    def wheel(self, pos):
+        # Input a value 0 to 255 to get a color value.
+        # The colours are a transition r - g - b - back to r.
+        if pos < 0 or pos > 255:
+            r = g = b = 0
+        elif pos < 85:
+            r = int(pos * 3)
+            g = int(255 - pos * 3)
+            b = 0
+        elif pos < 170:
+            pos -= 85
+            r = int(255 - pos * 3)
+            g = 0
+            b = int(pos * 3)
+        else:
+            pos -= 170
+            r = 0
+            g = int(pos * 3)
+            b = int(255 - pos * 3)
+        return (r, g, b) 
+
+
+    def rainbow_cycle(self):
+       #create a thread to run this function
+        while self.rainbow:
+         for j in range(255):
+            for i in range(self.pixel_count):
+                pixel_index = (i * 256 // self.pixel_count) + j
+                pos = pixel_index & 255
+                pixels[i] = self.wheel(pos)
+            pixels.show()
+            
     def saveLedDetails(self):
         data = {
             "red": self.red,

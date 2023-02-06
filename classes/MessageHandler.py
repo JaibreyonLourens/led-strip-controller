@@ -14,14 +14,25 @@ def saveData(id, data):
     with open('saved_details.json', 'w') as outfile:
         json.dump(Led, outfile)
 
+
 def readData():
-    with open('saved_details.json') as json_file:
-        data = json.load(json_file)
-        return data
+    details = open("saved_details.json")
+    data = json.load(details)
+    details.close()
+    return data
+
+
+def initData(self, data):
+    # print data
+    print("data" + str(data['id']))
+    self.led = ledController(
+        pixels, data["id"], data["red"], data["green"], data["blue"], data["isOn"], data["pixel_count"])
+    print("Led initialized")
+
 
 def loadData(self):
     data = readData()
-    self.led = ledController(data["data"]["red"], data["data"]["green"], data["data"]["blue"], data["data"]["isOn"], data["data"]["pixel_count"]) 
+    initData(self, data)
     sendLedState(self.client, self.led)
     publishStatus(self.client, "success", "Led details loaded", "loadData")
 
@@ -40,11 +51,12 @@ def sendLedState(client, led):
     client.publish(resultTopic, json.dumps(data))
 
 
-def publishStatus(client, status, message, command):
+def publishStatus(client, status, message, command, payload):
     data = {
         "status": status,
         "command": command,
-        "message": message
+        "message": message,
+        "payload": payload
     }
     client.publish(resultTopic, json.dumps(data))
 
@@ -68,43 +80,68 @@ class MessageHandler:
 
     def initLed(self, client, payload, command):
         try:
+           
+            print("Led initialized")
             self.led = ledController(pixels,
-                                     payload['id'],
-                                     payload['red'],
-                                     payload['green'],
-                                     payload['blue'],
-                                     payload['pixel_count'],
-                                     payload['isOn'],)
+                                    payload['id'],
+                                    payload['red'],
+                                    payload['green'],
+                                    payload['blue'],
+                                    payload['pixel_count'],
+                                    payload['isOn'],
+                                    rainbow=False)
             self.led.led_on()
-            publishStatus(client, "success", "Led initialized", command)
+            publishStatus(client, "success", "Led initialized", command, {"isOn": self.led.isOn})
             self.ledIsInitialized = True
-        except:
+        except Exception as exception:
+            #print error
+            print(exception)
             publishStatus(client, "error",
-                          "Led initialization failed", command)
+                          "Led initialization failed", command, {})
 
     def toggleLed(self, client, command):
         try:
             self.led.toggle()
-            publishStatus(client, "success", "Led toggled", command)
+            publishStatus(client, "success", "Led toggled", command, {})
         except:
-            publishStatus(client, "error", "Led is not Toggled", command)
+            publishStatus(client, "error", "Led is not Toggled", command, {})
 
     def changeColor(self, client, payload, command):
         try:
             self.led.change_color(
                 payload['red'], payload['green'], payload['blue'])
-            publishStatus(client, "success", "Led color changed", command)
+            publishStatus(client, "success", "Led color changed", command, {
+                            "red": payload['red'], "green": payload['green'], "blue": payload['blue']})
         except:
-            publishStatus(client, "error", "Did not change color", command)
+            publishStatus(client, "error", "Did not change color", command, {})
 
     def changePixelCount(self, client, payload, command):
         try:
             self.led.change_pixel_count(payload['pixel_count'])
             publishStatus(client, "success",
-                          "Led pixel count changed", command)
+                          "Led pixel count changed", command, {})
         except:
             publishStatus(client, "error",
-                          "Did not change pixel count", command)
+                          "Did not change pixel count", command, {})
+
+    def rainbow(self, client, command):
+        try:
+            self.led.rainbow = True
+            self.led.rainbow_cycle()
+            publishStatus(client, "success", "Led rainbow", command, {})
+        except Exception as exception:
+            print(exception)
+            publishStatus(client, "error", "Did not change color", command, {})
+    
+    def rainbowOff(self, client, command):
+        try:
+            self.led.rainbow = False
+            self.led.led_on()
+            publishStatus(client, "success", "Led rainbow off", command, {})
+        except Exception as exception:
+            print(exception)
+            publishStatus(client, "error", "Did not change color", command, {})
+            
 
     def messageHandler(self, client, topic, payload):
         if topic == "ledCommands":
@@ -129,6 +166,10 @@ class MessageHandler:
                         self.changePixelCount(client, commandPayload, command)
                     if (command == "getLedState"):
                         sendLedState(client, self.led)
+                    if (command == "rainbow"):
+                        self.rainbow(client, command)
+                    if (command == "rainbowOff"):
+                        self.rainbowOff(client, command)
                 else:
                     publishStatus(client, "error",
-                                  "Initialize the led first", command)
+                                  "Initialize the led first", command, {})
